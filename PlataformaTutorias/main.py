@@ -6,6 +6,7 @@ def main():
     root.title("Plataforma de Tutorías")
     root.geometry("900x600")
     root.resizable(False, False)
+    root.configure(bg="#0F1115")
 
     app = LoginView(root)
     app.pack(fill="both", expand=True)

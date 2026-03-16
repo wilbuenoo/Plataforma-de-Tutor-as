@@ -1,136 +1,184 @@
-import tkinter as tk
-from tkinter import messagebox
-from models.user import User
+from PyQt6.QtWidgets import (
+    QWidget, QLabel, QLineEdit, QPushButton,
+    QVBoxLayout, QComboBox, QFrame
+)
 
-# 🎨 PALETA APPLE DARK
-BG_COLOR = "#0E0E10"
-CARD_COLOR = "#1A1A1D"
-INPUT_COLOR = "#2A2A2E"
-ACCENT_COLOR = "#0A84FF"
-ACCENT_HOVER = "#339CFF"
-TEXT_COLOR = "#FFFFFF"
-SECONDARY_TEXT = "#8E8E93"
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QFont, QPixmap, QPainter, QLinearGradient, QColor, QIcon
+
+from services.auth_service import AuthService
+from views.dashboard_view import DashboardView
+from views.loading_overlay import LoadingOverlay
 
 
-class LoginView(tk.Frame):
+class LoginView(QWidget):
 
-    def __init__(self, master):
-        super().__init__(master, bg=BG_COLOR)
-        self.master = master
-        self.create_widgets()
+    def __init__(self):
+        super().__init__()
 
-    def create_widgets(self):
+        self.auth_service = AuthService()
 
-        # ===== CARD CENTRAL =====
-        container = tk.Frame(self, bg=CARD_COLOR)
-        container.place(relx=0.5, rely=0.5, anchor="center", width=420, height=480)
+        self.setWindowTitle("Plataforma Tutorías")
+        self.resize(900, 600)
 
-        # Título
-        tk.Label(
-            container,
-            text="Plataforma de Tutorías",
-            font=("Helvetica", 22, "bold"),
-            bg=CARD_COLOR,
-            fg=TEXT_COLOR
-        ).pack(pady=(40, 25))
+        # ⭐ ICONO DEL PROGRAMA
+        self.setWindowIcon(QIcon("assets/Logo.ico"))
 
-        # Usuario label
-        tk.Label(container, text="Usuario",
-                 bg=CARD_COLOR,
-                 fg=SECONDARY_TEXT,
-                 font=("Helvetica", 10)).pack()
+        self.setFont(QFont("Segoe UI", 11))
 
-        # Input moderno
-        self.username_entry = tk.Entry(
-            container,
-            font=("Helvetica", 13),
-            bg=INPUT_COLOR,
-            fg=TEXT_COLOR,
-            insertbackground="white",
-            relief="flat",
-            highlightthickness=0
+        # ===== FONDO DE LA UNIVERSIDAD =====
+        self.background = QPixmap("assets/Uni.jpg")
+
+        # ===== ESTILOS =====
+        self.setStyleSheet("""
+
+        QLabel{
+            color:white;
+        }
+
+        QLineEdit,QComboBox{
+            background-color:#282828;
+            border-radius:10px;
+            padding:12px;
+            color:white;
+            font-size:14px;
+        }
+
+        QPushButton{
+            background-color:#1DB954;
+            border-radius:20px;
+            padding:14px;
+            font-weight:600;
+            font-size:14px;
+        }
+
+        QPushButton:hover{
+            background-color:#1ed760;
+        }
+
+        QFrame{
+            background-color: rgba(0,0,0,0.85);
+            border-radius:20px;
+        }
+
+        """)
+
+        main_layout = QVBoxLayout()
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        card = QFrame()
+        card.setFixedWidth(380)
+
+        card_layout = QVBoxLayout()
+        card_layout.setSpacing(15)
+
+        # ===== LOGO =====
+        logo = QLabel()
+
+        pixmap_logo = QPixmap("assets/Logo.png")
+
+        logo.setPixmap(
+            pixmap_logo.scaled(
+                130,
+                130,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
         )
-        self.username_entry.pack(pady=12, ipady=10, ipadx=12)
 
-        # Rol label
-        tk.Label(container, text="Rol",
-                 bg=CARD_COLOR,
-                 fg=SECONDARY_TEXT,
-                 font=("Helvetica", 10)).pack(pady=(15, 5))
+        logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.role_var = tk.StringVar()
-        self.role_var.set("estudiante")
+        title = QLabel("Plataforma de Tutorías")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size:24px;font-weight:600")
 
-        roles = [("Administrador", "admin"),
-                 ("Tutor", "tutor"),
-                 ("Estudiante", "estudiante")]
+        subtitle = QLabel("Iniciar sesión")
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle.setStyleSheet("color:#b3b3b3")
 
-        for text, value in roles:
-            tk.Radiobutton(
-                container,
-                text=text,
-                variable=self.role_var,
-                value=value,
-                bg=CARD_COLOR,
-                fg=TEXT_COLOR,
-                selectcolor=INPUT_COLOR,
-                activebackground=CARD_COLOR,
-                activeforeground=TEXT_COLOR,
-                font=("Helvetica", 11),
-                cursor="hand2"
-            ).pack(anchor="w", padx=110, pady=2)
+        self.username = QLineEdit()
+        self.username.setPlaceholderText("Usuario")
 
-        # ===== BOTÓN APPLE =====
-        login_btn = tk.Button(
-            container,
-            text="Ingresar",
-            command=self.login,
-            bg=ACCENT_COLOR,
-            fg="white",
-            font=("Helvetica", 12, "bold"),
-            relief="flat",
-            cursor="hand2",
-            activebackground=ACCENT_HOVER,
-            activeforeground="white"
-        )
-        login_btn.pack(pady=40, ipadx=30, ipady=10)
+        self.password = QLineEdit()
+        self.password.setPlaceholderText("Contraseña")
+        self.password.setEchoMode(QLineEdit.EchoMode.Password)
 
-        # Hover effect
-        login_btn.bind("<Enter>", lambda e: login_btn.config(bg=ACCENT_HOVER))
-        login_btn.bind("<Leave>", lambda e: login_btn.config(bg=ACCENT_COLOR))
+        self.role = QComboBox()
+        self.role.addItems([
+            "Administrador",
+            "Docente",
+            "Estudiante"
+        ])
 
-    # ==============================
-    # LÓGICA LOGIN
-    # ==============================
+        login_btn = QPushButton("Entrar")
+        login_btn.clicked.connect(self.login)
 
+        self.message = QLabel("")
+        self.message.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        card_layout.addWidget(logo)
+        card_layout.addWidget(title)
+        card_layout.addWidget(subtitle)
+        card_layout.addSpacing(10)
+        card_layout.addWidget(self.username)
+        card_layout.addWidget(self.password)
+        card_layout.addWidget(self.role)
+        card_layout.addSpacing(10)
+        card_layout.addWidget(login_btn)
+        card_layout.addWidget(self.message)
+
+        card.setLayout(card_layout)
+
+        main_layout.addWidget(card)
+
+        self.setLayout(main_layout)
+
+        self.loading = LoadingOverlay(self, "Ingresando...")
+
+    # ===== PINTAR FONDO DINÁMICO =====
+    def paintEvent(self, event):
+
+        painter = QPainter(self)
+
+        if not self.background.isNull():
+            scaled = self.background.scaled(
+                self.size(),
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            painter.drawPixmap(0, 0, scaled)
+
+        # ===== DEGRADADO OSCURO =====
+        gradient = QLinearGradient(0, 0, 0, self.height())
+        gradient.setColorAt(0, QColor(0, 0, 0, 120))
+        gradient.setColorAt(1, QColor(0, 0, 0, 200))
+
+        painter.fillRect(self.rect(), gradient)
+
+    # ===== LOGIN CORREGIDO PARA CAMBIAR ROL =====
     def login(self):
-        username = self.username_entry.get()
-        role = self.role_var.get()
 
-        if not username:
-            messagebox.showerror("Error", "Debe ingresar un usuario")
-            return
+        user = self.username.text()
+        password = self.password.text()
+        role = self.role.currentText()
 
-        user = User(username, role)
-        self.redirect(user)
+        self.loading.show_loading()
 
-    # ==============================
-    # REDIRECCIÓN SIN CIRCULAR IMPORT
-    # ==============================
+        def process_login():
 
-    def redirect(self, user):
-        self.destroy()
+            result = self.auth_service.login(user, password, role)
 
-        if user.role == "admin":
-            from views.admin_view import AdminView
-            view = AdminView(self.master, user)
+            self.loading.hide_loading()
 
-        elif user.role == "tutor":
-            from views.tutor_view import TutorView
-            view = TutorView(self.master, user)
+            if result:
+                # ✅ PASAR LOGIN COMO REFERENCIA
+                self.dashboard = DashboardView(result, login_reference=self)
 
-        else:
-            from views.student_view import StudentView
-            view = StudentView(self.master, user)
+                # 🔥 OCULTAR LOGIN, NO CERRAR
+                self.hide()
+                self.dashboard.show()
 
-        view.pack(fill="both", expand=True)
+            else:
+                self.message.setText("Credenciales incorrectas")
+
+        QTimer.singleShot(1200, process_login)

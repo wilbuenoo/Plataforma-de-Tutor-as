@@ -1,17 +1,23 @@
-import tkinter as tk
+import sys
+from PyQt6.QtWidgets import QApplication
 from views.login_view import LoginView
+from views.splash_screen import SplashScreen
+
 
 def main():
-    root = tk.Tk()
-    root.title("Plataforma de Tutorías")
-    root.geometry("900x600")
-    root.resizable(False, False)
-    root.configure(bg="#0F1115")
 
-    app = LoginView(root)
-    app.pack(fill="both", expand=True)
+    app = QApplication(sys.argv)
 
-    root.mainloop()
+    login_window = LoginView()
+
+    def open_login():
+        login_window.show()
+
+    splash = SplashScreen(open_login)
+    splash.show()
+
+    sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

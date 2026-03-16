@@ -1,0 +1,190 @@
+from PyQt6.QtWidgets import ( QWidget, QLabel, QPushButton, QVBoxLayout,
+QHBoxLayout, QGridLayout, QFrame, QListWidget, QLineEdit, QMessageBox,
+QDateEdit, QTableWidget, QTableWidgetItem, QComboBox,
+QGraphicsOpacityEffect ) from PyQt6.QtGui import QPixmap, QFont from
+PyQt6.QtCore import Qt, QDate, QPropertyAnimation, QTimer
+
+BG_COLOR = “#1e1e1e” SIDEBAR_COLOR = “#191919” CARD_COLOR = “#2a2a2a”
+HOVER_COLOR = “#323232” BORDER_COLOR = “#3a3a3a”
+
+ACCENT_COLOR = “#1DB954” DANGER_COLOR = “#ff453a” TEXT_COLOR = “#ffffff”
+
+===== COMPONENTE DE NOTIFICACIÓN TIPO APPLE =====
+
+class AppleToast(QFrame): def init(self, parent, message):
+super().__init__(parent) self.setFixedSize(300, 50)
+self.setStyleSheet(f”“” QFrame {{ background-color: rgba(40, 40, 40,
+240); border: 1px solid {BORDER_COLOR}; border-radius: 25px; }} QLabel
+{{ color: white; background: transparent; font-size: 10pt; font-weight:
+bold; }} “““)
+
+        layout = QHBoxLayout(self)
+        icon = QLabel("✨")
+        text = QLabel(message)
+        layout.addWidget(icon)
+        layout.addWidget(text)
+        layout.addStretch()
+
+        self.opacity_effect = QGraphicsOpacityEffect(self)
+        self.setGraphicsEffect(self.opacity_effect)
+        
+        self.anim = QPropertyAnimation(self.opacity_effect, b"opacity")
+        self.anim.setDuration(500)
+        
+        parent_rect = parent.rect()
+        self.move((parent_rect.width() - 300) // 2, parent_rect.height() - 80)
+        
+        self.show_toast()
+
+    def show_toast(self):
+        self.anim.setStartValue(0)
+        self.anim.setEndValue(1)
+        self.anim.start()
+        QTimer.singleShot(2500, self.hide_toast)
+
+    def hide_toast(self):
+        self.anim.setDirection(QPropertyAnimation.Direction.Backward)
+        self.anim.finished.connect(self.deleteLater)
+        self.anim.start()
+
+===== CLASE PRINCIPAL DASHBOARD =====
+
+class DashboardView(QWidget):
+
+    def __init__(self, user, login_reference=None):
+        super().__init__()
+        self.user = user
+        self.login_window = login_reference
+
+        # Datos del sistema
+        self.system_data = {
+            "materias": ["Matemáticas", "Programación", "Física"],
+            "disponibilidades": [],
+            "solicitudes": [],
+            "historial": [],
+            "estudiantes": {
+                "Alice": {"Computer Science": ["Programming Abstractions", "Artificial Intelligence"]},
+                "Bob": {"Mechanical Engineering": ["Thermodynamics", "Dynamic Systems & Control"]},
+                "Charlie": {"Electrical Engineering": ["Circuits I", "Control Systems"]}
+            }
+        }
+
+        self.oxford_data = {
+            "Computer Science": {
+                "Semestre 1": ["Intro to Programming", "Data Structures"],
+                "Semestre 2": ["Algorithms", "Databases"],
+                "Semestre 3": ["AI & ML", "Computer Networks"]
+            },
+            "Mechanical Engineering": {
+                "Semestre 1": ["Statics", "Thermodynamics I"],
+                "Semestre 2": ["Dynamics", "Fluid Mechanics"],
+                "Semestre 3": ["Heat Transfer", "Mechanical Design"]
+            },
+            "Electrical Engineering": {
+                "Semestre 1": ["Circuit Theory", "Digital Logic"],
+                "Semestre 2": ["Signals & Systems", "Electromagnetics"],
+                "Semestre 3": ["Control Systems", "Power Electronics"]
+            }
+        }
+
+        self.setWindowTitle("Plataforma de Tutorías")
+        self.setMinimumSize(1000, 700)
+        self.setStyleSheet(f"background-color:{BG_COLOR}; color:{TEXT_COLOR};")
+
+        self.init_ui()
+
+    def style_input(self, w):
+        w.setStyleSheet(f"""
+            QLineEdit, QComboBox, QDateEdit {{
+                background-color:{CARD_COLOR};
+                border-radius:6px;
+                padding:8px;
+                border:1px solid {BORDER_COLOR};
+                color: {TEXT_COLOR};
+            }}
+        """)
+
+    def style_action_button(self, btn):
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {ACCENT_COLOR};
+                color: black;
+                border-radius: 8px;
+                padding: 10px;
+                font-weight: bold;
+                font-size: 11pt;
+            }}
+        """)
+
+    def init_ui(self):
+        root_layout = QHBoxLayout(self)
+        root_layout.setContentsMargins(0,0,0,0)
+        root_layout.setSpacing(0)
+
+        sidebar = QFrame()
+        sidebar.setFixedWidth(240)
+        sidebar.setStyleSheet(f"background-color:{SIDEBAR_COLOR}; border-right:1px solid {BORDER_COLOR};")
+        sidebar_layout = QVBoxLayout(sidebar)
+
+        profile_container = QLabel()
+        profile_container.setFixedSize(100, 100)
+        profile_container.setText(self.user['username'][0].upper())
+        profile_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        profile_container.setStyleSheet(f"background-color: {CARD_COLOR}; color: {ACCENT_COLOR}; border-radius: 50px; border: 2px solid {BORDER_COLOR}; font-size: 30pt; font-weight: bold;")
+        
+        sidebar_layout.addWidget(profile_container)
+
+        name_label = QLabel(self.user['username'])
+        sidebar_layout.addWidget(name_label)
+
+        role_label = QLabel(self.user['role'])
+        sidebar_layout.addWidget(role_label)
+
+        sidebar_layout.addSpacing(30)
+
+        content_widget = QWidget()
+        self.main_layout = QVBoxLayout(content_widget)
+
+        welcome = QLabel("Panel de Control")
+        self.main_layout.addWidget(welcome)
+
+        self.grid_container = QWidget()
+        self.grid = QGridLayout(self.grid_container)
+
+        if self.user["role"] == "Administrador":
+            options = ["Gestionar Usuarios", "Asignar Roles", "Administrar Materias", "Ver Reportes"]
+        elif self.user["role"] == "Docente":
+            options = ["Publicar Disponibilidad", "Ver Solicitudes", "Registrar Tutoría", "Historial de Tutorías"]
+        else:
+            options = ["Buscar Tutorías", "Solicitar Tutoría", "Mis Tutorías", "Historial Académico"]
+
+        row = col = 0
+        for option in options:
+            btn = QPushButton(option)
+            btn.clicked.connect(lambda checked, text=option: self.show_section(text))
+            self.grid.addWidget(btn, row, col)
+            col += 1
+            if col > 1:
+                col = 0
+                row += 1
+
+        self.main_layout.addWidget(self.grid_container)
+
+        self.section_widget = QFrame()
+        self.section_container = QVBoxLayout(self.section_widget)
+        self.main_layout.addWidget(self.section_widget)
+        self.section_widget.hide()
+
+        root_layout.addWidget(sidebar)
+        root_layout.addWidget(content_widget)
+
+    # -------- SECCIONES --------
+    def show_section(self, section):
+        print("Abriste sección:", section)
+
+EJECUCIÓN
+
+if name == “main”: import sys from PyQt6.QtWidgets import QApplication
+app = QApplication(sys.argv) user_test = {“username”: “Alice”, “role”:
+“Estudiante”} window = DashboardView(user_test) window.show()
+sys.exit(app.exec())
